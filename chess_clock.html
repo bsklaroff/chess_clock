@@ -44,17 +44,17 @@
         return res;
       };
 
-      var press_clock = function(player) {
+      var press_clock = function(player_pressed) {
         if (player_to_move == -1) {
           last_press = new Date();
           timer = setInterval("update()", tick);
-        } else if (player_to_move != player) {
+        } else if (player_to_move == player_pressed) {
           var now = new Date();
           player_time[player_to_move] -= (now - last_press);
           player_time[player_to_move] = Math.max(player_time[player_to_move], 0);
 	  last_press = new Date();
         }
-        player_to_move = player;
+        player_to_move = 1 - player_pressed;
         update();
       };
 
