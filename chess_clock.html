@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Chess Clock</title>
+    <style type="text/css">
+      div#clock {
+	width: 100%;
+      }
+      div#clock table {
+        width: 100%;
+      }
+      div#clock table td {
+        width: 50%;
+      }
+      div#clock input {
+        width: 100%;
+      }
+    </style>
+    <script>
+      var timer;
+      var tick = 100;
+      var player_to_move = -1;
+      var player_time = Array(300000,300000);
+      var last_press;
+
+      var init = function() {
+        document.getElementById('player0_clock').value = time_str(player_time[0]);
+        document.getElementById('player1_clock').value = time_str(player_time[1]);
+      };
+
+      var time_str = function(milliseconds) {
+        var seconds = Math.ceil(milliseconds/1000);
+        var hours = Math.floor(seconds/3600);
+        seconds %= 3600;
+        var minutes = Math.floor(seconds/60);
+        seconds %= 60;
+        var res = minutes + ":" + seconds;
+        if (seconds < 10) {
+          res = minutes + ":0" + seconds;
+        }
+        if (hours) {
+          res = hours + ":" + res;
+        }
+        return res;
+      };
+
+      var press_clock = function(player) {
+        if (player_to_move == -1) {
+          last_press = new Date();
+          timer = setInterval("update()", tick);
+        } else if (player_to_move != player) {
+          var now = new Date();
+          player_time[player_to_move] -= (now - last_press);
+          player_time[player_to_move] = Math.max(player_time[player_to_move], 0);
+	  last_press = new Date();
+        }
+        player_to_move = player;
+        update();
+      };
+
+      var update = function() {
+        var local_time = Array(player_time[0], player_time[1]);
+        if (player_to_move == 0 || player_to_move == 1) {
+          var now = new Date();
+          local_time[player_to_move] -= (now - last_press);
+          local_time[player_to_move] = Math.max(local_time[player_to_move], 0);
+        }
+        document.getElementById('player0_clock').value = time_str(local_time[0]);
+        document.getElementById('player1_clock').value = time_str(local_time[1]);
+      };
+    </script>
+  </head>
+  <body onload="init()">
+    <div id="clock">
+      <table>
+	<td>
+	  <input type="button" id="player0_clock" onclick="press_clock(0)" />
+	</td>
+	<td>
+	  <input type="button" id="player1_clock" onclick="press_clock(1)" />
+	</td>
+      </table>
+    </div>
+  </body>
+</html>
