@@ -7,26 +7,36 @@
 	width: 100%;
       }
       div#clock table {
-        width: 100%;
+        margin: 0px auto 0px auto;
       }
       div#clock table td {
         width: 50%;
+        height: 100%;
       }
       div#clock input {
         width: 100%;
+        height: 100%;
+        font-size: 200pt;
+      }
+      input#clock_control {
+        display: block;
+        margin: 0px auto 0px auto;
+        text-align: center;
+        width: 100px;
+      }
+      div#settings {
+        padding-top: 10px;
       }
     </style>
     <script>
       var timer;
       var tick = 100;
-      var player_to_move = -1;
-      var player_time = Array(300000,300000);
+      var player_to_move;
+      var game_state;
+      var player0_default = 300000;
+      var player1_default = 300000;
+      var player_time;
       var last_press;
-
-      var init = function() {
-        document.getElementById('player0_clock').value = time_str(player_time[0]);
-        document.getElementById('player1_clock').value = time_str(player_time[1]);
-      };
 
       var time_str = function(milliseconds) {
         var seconds = Math.ceil(milliseconds/1000);
@@ -44,23 +54,9 @@
         return res;
       };
 
-      var press_clock = function(player_pressed) {
-        if (player_to_move == -1) {
-          last_press = new Date();
-          timer = setInterval("update()", tick);
-        } else if (player_to_move == player_pressed) {
-          var now = new Date();
-          player_time[player_to_move] -= (now - last_press);
-          player_time[player_to_move] = Math.max(player_time[player_to_move], 0);
-	  last_press = new Date();
-        }
-        player_to_move = 1 - player_pressed;
-        update();
-      };
-
       var update = function() {
         var local_time = Array(player_time[0], player_time[1]);
-        if (player_to_move == 0 || player_to_move == 1) {
+        if (game_state === 'playing') {
           var now = new Date();
           local_time[player_to_move] -= (now - last_press);
           local_time[player_to_move] = Math.max(local_time[player_to_move], 0);
@@ -68,9 +64,100 @@
         document.getElementById('player0_clock').value = time_str(local_time[0]);
         document.getElementById('player1_clock').value = time_str(local_time[1]);
       };
+
+      var press_clock = function(player_pressed) {
+        if (game_state === 'reset' || game_state === 'paused') {
+          last_press = new Date();
+          timer = setInterval("update()", tick);
+          document.getElementById('clock_control').value = 'Pause';
+          game_state = 'playing';
+        } else if (game_state === 'playing' && player_to_move === player_pressed) {
+          var now = new Date();
+          player_time[player_to_move] -= (now - last_press);
+          player_time[player_to_move] = Math.max(player_time[player_to_move], 0);
+          last_press = new Date();
+        }
+        if (game_state != 'editing') {
+          player_to_move = 1 - player_pressed;
+          document.getElementById('player'+player_pressed+'_clock').disabled = true;
+          document.getElementById('player'+player_to_move+'_clock').disabled = false;
+          update();
+        }
+      };
+
+      var clock_control = function() {
+        if (game_state === 'editing') {
+          edit_done();
+        } else if (game_state === 'reset') {
+          edit_settings();
+        } else if (game_state === 'paused') {
+          reset();
+        } else {
+          pause();
+        }
+      };
+
+      var edit_done = function() {
+        document.getElementById('clock_control').value = 'Edit Settings';
+        document.getElementById('player0_clock').disabled = false;
+        document.getElementById('player1_clock').disabled = false;
+        document.getElementById('settings').hidden = true;
+        game_state = 'reset';
+      };
+
+      var edit_settings = function() {
+        document.getElementById('clock_control').value = 'Done Editing';
+        document.getElementById('player0_clock').disabled = true;
+        document.getElementById('player1_clock').disabled = true;
+        document.getElementById('settings').hidden = false;
+        game_state = 'editing';
+      };
+
+      var reset = function() {
+        player_time = Array(player0_default, player1_default);
+        document.getElementById('player0_clock').value = time_str(player_time[0]);
+        document.getElementById('player1_clock').value = time_str(player_time[1]);
+        for (i = 0; i < 2; i++) {
+          var seconds = Math.ceil(player_time[i]/1000);
+          document.getElementById('player'+i+'_hours').value = Math.floor(seconds/3600);
+          seconds %= 3600;
+          document.getElementById('player'+i+'_minutes').value = Math.floor(seconds/60);
+          seconds %= 60;
+          document.getElementById('player'+i+'_seconds').value = seconds;
+        }
+        document.getElementById('clock_control').value = 'Edit Settings';
+        game_state = 'reset';
+      };
+
+      var pause = function() {
+        var now = new Date();
+        player_time[player_to_move] -= (now - last_press);
+        player_time[player_to_move] = Math.max(player_time[player_to_move], 0);
+        document.getElementById('player0_clock').disabled = false;
+        document.getElementById('player1_clock').disabled = false;
+        document.getElementById('clock_control').value = 'Reset';
+        player_to_move = -1;
+        game_state = 'paused';
+      };
+
+      var edit_times = function() {
+        document.getElementById('player0_clock').value = time_str(player_time[0]);
+        document.getElementById('player1_clock').value = time_str(player_time[1]);
+      };
+
+      var toggle_same_time = function() {
+        if (document.getElementById('same_time').checked) {
+          document.getElementById('player1_settings').hidden = true;
+          document.getElementById('time_label').innerText = 'Time Per Player';
+        } else {
+          document.getElementById('player1_settings').hidden = false;
+          document.getElementById('time_label').innerText = 'Left Player Time';
+        }
+        edit_times();
+      };
     </script>
   </head>
-  <body onload="init()">
+  <body onload="reset()">
     <div id="clock">
       <table>
 	<td>
@@ -80,6 +167,25 @@
 	  <input type="button" id="player1_clock" onclick="press_clock(1)" />
 	</td>
       </table>
+    </div>
+    <div>
+      <input type="button" id="clock_control" onclick="clock_control()" />
+    </div>
+    <div id="settings" hidden="true">
+      <div id="player0_settings">
+	<span id="time_label">Time Per Player</span>
+        <input type="text" id="player0_hours" />:
+	<input type="text" id="player0_minutes" />:
+	<input type="text" id="player0_seconds" />
+      </div>
+      <div id="player1_settings" hidden="true">
+	Right Player Time
+        <input type="text" id="player1_hours" />:
+	<input type="text" id="player1_minutes" />:
+	   <input type="text" id="player1_seconds" />
+      </div>
+      <input type="checkbox" id="same_time" checked="true" onclick="toggle_same_time()"/>
+      <label for="same_time">Players start with the same time</label>
     </div>
   </body>
 </html>
