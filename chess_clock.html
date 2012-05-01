@@ -33,8 +33,7 @@
       var tick = 100;
       var player_to_move;
       var game_state;
-      var player0_default = 300000;
-      var player1_default = 300000;
+      var player_default = Array(300000, 300000);
       var player_time;
       var last_press;
 
@@ -49,9 +48,29 @@
           res = minutes + ":0" + seconds;
         }
         if (hours) {
-          res = hours + ":" + res;
+          if (minutes < 10) {
+            res = hours + ":0" + res;
+          } else {
+            res = hours + ":" + res;
+          }
         }
         return res;
+      };
+
+      var set_edit_fields = function(i) {
+        var seconds = Math.ceil(player_default[i]/1000);
+        document.getElementById('player'+i+'_hours').value = Math.floor(seconds/3600);
+        seconds %= 3600;
+        var minutes = Math.floor(seconds/60);
+        document.getElementById('player'+i+'_minutes').value = minutes;
+        if (minutes < 10) {
+          document.getElementById('player'+i+'_minutes').value = '0'+minutes;
+        }
+        seconds %= 60;
+        document.getElementById('player'+i+'_seconds').value = seconds;
+        if (seconds < 10) {
+          document.getElementById('player'+i+'_seconds').value = '0'+seconds;
+        }
       };
 
       var update = function() {
@@ -114,16 +133,11 @@
       };
 
       var reset = function() {
-        player_time = Array(player0_default, player1_default);
+        player_time = Array(player_default[0], player_default[1]);
         document.getElementById('player0_clock').value = time_str(player_time[0]);
         document.getElementById('player1_clock').value = time_str(player_time[1]);
-        for (i = 0; i < 2; i++) {
-          var seconds = Math.ceil(player_time[i]/1000);
-          document.getElementById('player'+i+'_hours').value = Math.floor(seconds/3600);
-          seconds %= 3600;
-          document.getElementById('player'+i+'_minutes').value = Math.floor(seconds/60);
-          seconds %= 60;
-          document.getElementById('player'+i+'_seconds').value = seconds;
+        for (var i = 0; i < 2; i++) {
+          set_edit_fields(i);
         }
         document.getElementById('clock_control').value = 'Edit Settings';
         game_state = 'reset';
@@ -141,8 +155,38 @@
       };
 
       var edit_times = function() {
+        for (var i = 0; i < 2; i++) {
+	  var hours = parseInt(document.getElementById('player'+i+'_hours').value);
+	  var minutes = parseInt(document.getElementById('player'+i+'_minutes').value);
+	  var seconds = parseInt(document.getElementById('player'+i+'_seconds').value);
+          if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+            set_edit_fields(i);
+            alert('Time must be a number');
+            return false;
+          }
+          seconds = seconds + 60 * minutes + 3600 * hours;
+          if (seconds < 0) {
+            set_edit_fields(i);
+            alert('Time cannot be negative');
+            return false;
+          } else if (Math.floor(seconds/3600) >= 100) {
+            set_edit_fields(i);
+            alert('Time must be less than 100 hours');
+            return false;            
+          }
+          player_default[i] = seconds * 1000;
+          player_time[i] = player_default[i];
+          set_edit_fields(i);
+          if (document.getElementById('same_time').checked) {
+            player_default[1] = player_default[0]
+            player_time[1] = player_default[1];
+            set_edit_fields(1);
+            break;
+          }
+        }
         document.getElementById('player0_clock').value = time_str(player_time[0]);
         document.getElementById('player1_clock').value = time_str(player_time[1]);
+        return true;
       };
 
       var toggle_same_time = function() {
@@ -174,15 +218,15 @@
     <div id="settings" hidden="true">
       <div id="player0_settings">
 	<span id="time_label">Time Per Player</span>
-        <input type="text" id="player0_hours" />:
-	<input type="text" id="player0_minutes" />:
-	<input type="text" id="player0_seconds" />
+        <input type="text" id="player0_hours" onChange="edit_times()" />:
+	<input type="text" id="player0_minutes" onChange="edit_times()" />:
+	<input type="text" id="player0_seconds" onChange="edit_times()" />
       </div>
       <div id="player1_settings" hidden="true">
 	Right Player Time
-        <input type="text" id="player1_hours" />:
-	<input type="text" id="player1_minutes" />:
-	   <input type="text" id="player1_seconds" />
+        <input type="text" id="player1_hours" onChange="edit_times()" />:
+	<input type="text" id="player1_minutes" onChange="edit_times()" />:
+	<input type="text" id="player1_seconds" onChange="edit_times()" />
       </div>
       <input type="checkbox" id="same_time" checked="true" onclick="toggle_same_time()"/>
       <label for="same_time">Players start with the same time</label>
