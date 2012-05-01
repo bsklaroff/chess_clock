@@ -86,7 +86,7 @@
         for (var i = 0; i < 2; i++) {
           document.getElementById('player'+i+'_clock').value = time_str(local_time[i]);
           if (local_time[i] === 0) {
-            document.getElementById('player'+i+'_clock').className = 'red'; 
+            document.getElementById('player'+i+'_clock').className = 'red';
           } else {
             document.getElementById('player'+i+'_clock').className = '';
           }
@@ -216,6 +216,18 @@
         }
       };
       window.onbeforeunload = confirm_exit;
+
+      var press_key = function(e) {
+        var key = window.event ? event.keyCode : e.keyCode;
+        var player0_keys = Array(113,81,119,87,101,69,114,82,116,84,97,65,115,83,100,68,102,70,103,71,122,90,120,88,99,67,118,86,98,66);
+        var player1_keys = Array(121,89,117,85,105,73,111,79,112,80,104,72,106,74,107,75,108,76,59,186,110,78,109,77,44,188,46,190,47,191);
+        if (player0_keys.indexOf(key) != -1) {
+          press_clock(0);
+        } else if (player1_keys.indexOf(key) != -1) {
+          press_clock(1);
+        }
+      };
+      document.onkeyup = press_key;
     </script>
   </head>
   <body onload="reset()">
