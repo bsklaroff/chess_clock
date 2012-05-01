@@ -27,6 +27,9 @@
       div#settings {
         padding-top: 10px;
       }
+      input.red {
+        color: red;
+      }
     </style>
     <script>
       var timer;
@@ -38,7 +41,7 @@
       var last_press;
 
       var time_str = function(milliseconds) {
-        var seconds = Math.ceil(milliseconds/1000);
+        var seconds = Math.floor(milliseconds/1000);
         var hours = Math.floor(seconds/3600);
         seconds %= 3600;
         var minutes = Math.floor(seconds/60);
@@ -73,21 +76,27 @@
         }
       };
 
-      var update = function() {
+      var update_clocks = function() {
         var local_time = Array(player_time[0], player_time[1]);
         if (game_state === 'playing') {
           var now = new Date();
           local_time[player_to_move] -= (now - last_press);
           local_time[player_to_move] = Math.max(local_time[player_to_move], 0);
         }
-        document.getElementById('player0_clock').value = time_str(local_time[0]);
-        document.getElementById('player1_clock').value = time_str(local_time[1]);
+        for (var i = 0; i < 2; i++) {
+          document.getElementById('player'+i+'_clock').value = time_str(local_time[i]);
+          if (local_time[i] === 0) {
+            document.getElementById('player'+i+'_clock').className = 'red'; 
+          } else {
+            document.getElementById('player'+i+'_clock').className = '';
+          }
+        }
       };
 
       var press_clock = function(player_pressed) {
         if (game_state === 'reset' || game_state === 'paused') {
           last_press = new Date();
-          timer = setInterval("update()", tick);
+          timer = setInterval("update_clocks()", tick);
           document.getElementById('clock_control').value = 'Pause';
           game_state = 'playing';
         } else if (game_state === 'playing' && player_to_move === player_pressed) {
@@ -100,7 +109,7 @@
           player_to_move = 1 - player_pressed;
           document.getElementById('player'+player_pressed+'_clock').disabled = true;
           document.getElementById('player'+player_to_move+'_clock').disabled = false;
-          update();
+          update_clocks();
         }
       };
 
@@ -110,7 +119,9 @@
         } else if (game_state === 'reset') {
           edit_settings();
         } else if (game_state === 'paused') {
-          reset();
+          if (confirm('Are you sure you want to reset the time?')) {
+            reset();
+          }
         } else {
           pause();
         }
@@ -134,8 +145,7 @@
 
       var reset = function() {
         player_time = Array(player_default[0], player_default[1]);
-        document.getElementById('player0_clock').value = time_str(player_time[0]);
-        document.getElementById('player1_clock').value = time_str(player_time[1]);
+        update_clocks();
         for (var i = 0; i < 2; i++) {
           set_edit_fields(i);
         }
@@ -168,11 +178,11 @@
           if (seconds < 0) {
             set_edit_fields(i);
             alert('Time cannot be negative');
-            return false;
+            return;
           } else if (Math.floor(seconds/3600) >= 100) {
             set_edit_fields(i);
             alert('Time must be less than 100 hours');
-            return false;            
+            return;
           }
           player_default[i] = seconds * 1000;
           player_time[i] = player_default[i];
@@ -184,9 +194,8 @@
             break;
           }
         }
-        document.getElementById('player0_clock').value = time_str(player_time[0]);
-        document.getElementById('player1_clock').value = time_str(player_time[1]);
-        return true;
+	update_clocks();
+        document.getElementById('clock_control').focus();
       };
 
       var toggle_same_time = function() {
@@ -199,6 +208,14 @@
         }
         edit_times();
       };
+
+      var confirm_exit = function() {
+        if (game_state === 'playing') {
+          pause();
+          return 'If you leave this page, the current game will not be saved.';
+        }
+      };
+      window.onbeforeunload = confirm_exit;
     </script>
   </head>
   <body onload="reset()">
